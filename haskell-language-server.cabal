@@ -83,6 +83,16 @@ executable haskell-language-server
   hs-source-dirs:   exe plugins/default/src
   other-modules:
     Ide.Plugin.Eval
+    Ide.Plugin.Eval.Code
+    Ide.Plugin.Eval.CodeLens
+    Ide.Plugin.Eval.GHC
+    Ide.Plugin.Eval.Parse.Option
+    Ide.Plugin.Eval.Parse.Parser
+    Ide.Plugin.Eval.Parse.Section
+    Ide.Plugin.Eval.Parse.Token
+    Ide.Plugin.Eval.Tutorial
+    Ide.Plugin.Eval.Types
+    Ide.Plugin.Eval.Util
     Ide.Plugin.Example
     Ide.Plugin.Example2
     Ide.Plugin.Floskell
@@ -141,6 +151,12 @@ executable haskell-language-server
     , time
     , transformers
     , unordered-containers
+    , parser-combinators
+    , pretty-simple
+    , Diff
+    , QuickCheck
+    , ghc-paths
+
 
   if flag(agpl)
     build-depends: brittany     >= 0.13.1.0
@@ -230,6 +246,7 @@ test-suite func-test
     , tasty-expected-failure
     , tasty-golden
     , tasty-rerun
+    , QuickCheck
 
   hs-source-dirs:     test/functional plugins/tactics/src
 
@@ -280,3 +297,7 @@ test-suite wrapper-test
   hs-source-dirs:     test/wrapper
   main-is:            Main.hs
   ghc-options:        -Wall
+
+
+
+
