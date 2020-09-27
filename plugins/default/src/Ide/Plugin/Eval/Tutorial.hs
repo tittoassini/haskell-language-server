@@ -99,9 +99,14 @@ evens = filter odd
 {-
 Let's see in more detail the components of a test.
 
+Language Extensions:
+
+>>> :set -XScopedTypeVariables -XStandaloneDeriving -XDataKinds -XTypeOperators -XExplicitNamespaces
+
 Imports, from any package in scope:
 
 >>> import Data.List
+>>> import GHC.TypeNats
 
 or from modules in the same source directory:
 
@@ -115,26 +120,33 @@ Statements/declarations (function declaration can optionally be introduced by 'l
 >>> class Display a where display :: a -> String
 >>> instance Display TertiumDatur where display = show
 
-Type and Kind directives:
+Type and Kind directives (as in ghci):
 
 >>> :type Truly
->>> :type +v Truly
->>> :type +d Truly
->>> :kind TertiumDatur
->>> :kind! TertiumDatur
 Truly :: TertiumDatur
+
+>>> :kind TertiumDatur
 TertiumDatur :: *
 
-Language Extensions setting directives:
+>>> :type 3
+3 :: forall p. Num p => p
 
->>> :set -XScopedTypeVariables -XStandaloneDeriving
+>>> :type +d 3
+3 :: Integer
+
+>>> type N = 1
+>>> type M = 40
+>>> :kind! N + M + 1
+N + M + 1 :: Nat
+= 42
 
 Properties:
 
 prop> \(l::[Int]) -> reverse (reverse l) == l
++++ OK, passed 100 tests.
 
 prop> \(l::[Bool]) -> reverse l == l
-*** Failed! Falsified (after 3 tests):
+*** Failed! Falsified (after 5 tests and 2 shrinks):
 [True,False]
 
 And finally expressions:
