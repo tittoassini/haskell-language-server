@@ -1,0 +1,9 @@
+-- Support for property checking
+module TProperty where
+
+-- prop> \(l::[Bool]) -> reverse (reverse l) == l
+-- +++ OK, passed 100 tests.
+
+-- prop> \(l::[Bool]) -> reverse l == l
+-- +++ OK, passed 100 tests.
+

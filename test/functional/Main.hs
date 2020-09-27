@@ -1,9 +1,10 @@
 module Main where
 
-import Test.Tasty
-import Test.Tasty.Runners (listingTests, consoleTestReporter)
-import Test.Tasty.Ingredients.Rerun
-import Test.Tasty.Runners.AntXML
+import           Test.Tasty
+import           Test.Tasty.Ingredients.Rerun
+import           Test.Tasty.Runners           (consoleTestReporter,
+                                               listingTests)
+import           Test.Tasty.Runners.AntXML
 
 import Command
 import Completion

@@ -3,12 +3,13 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 -- | Information and display strings for HIE's version
 -- and the current project's version
 module Ide.Version where
 
-import           Development.GitRev              (gitCommitCount)
-import           Options.Applicative.Simple      (simpleVersion)
+import           Development.GitRev            (gitCommitCount)
+import           Options.Applicative.Simple    (simpleVersion)
 import qualified Paths_haskell_language_server as Meta
 import           System.Info
 import           Data.Version
@@ -18,6 +19,7 @@ import           System.Process
 import           System.Exit
 import           Text.ParserCombinators.ReadP
 
+-- >>> hlsVersion
 hlsVersion :: String
 hlsVersion =
   let commitCount = $gitCommitCount

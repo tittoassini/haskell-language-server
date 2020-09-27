@@ -1,9 +1,9 @@
 resolver: lts-14.27 # Last 8.6.5
 
 packages:
-- .
-- ./ghcide/
-- ./hls-plugin-api
+  - .
+  - ./ghcide/
+  - ./hls-plugin-api
 
 ghc-options:
   "$everything": -haddock
@@ -71,6 +71,6 @@ flags:
 # allow-newer: true
 
 nix:
-  packages: [ icu libcxx zlib ]
+  packages: [icu libcxx zlib]
 
 concurrent-tests: false
