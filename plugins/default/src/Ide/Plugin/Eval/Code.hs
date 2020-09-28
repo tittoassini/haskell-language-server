@@ -4,7 +4,7 @@
 -- | Expression execution
 module Ide.Plugin.Eval.Code(Statement,testRanges,resultRange,evalExtensions,evalSetup,evalExpr,propSetup,testCheck,asStatements) where
 
-import           Data.Algorithm.Diff            (Diff (..), getDiff)
+import           Data.Algorithm.Diff            (Diff,PolyDiff(..),getDiff)
 import qualified Data.List.NonEmpty             as NE
 import           Data.String                    (IsString)
 import qualified Data.Text                      as T

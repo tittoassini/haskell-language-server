@@ -161,7 +161,7 @@ executable haskell-language-server
     , ghc-exactprint
     , parser-combinators
     , pretty-simple
-    , Diff
+    , Diff == 0.4.*
     , ghc-paths
     , QuickCheck
 

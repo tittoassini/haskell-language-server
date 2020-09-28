@@ -30,7 +30,7 @@ import           Control.DeepSeq    (NFData)
 import           Control.DeepSeq    (NFData (rnf), deepseq)
 import           Data.List          (partition)
 import           Data.List.NonEmpty (NonEmpty)
-import           Data.String        (String)
+-- import           Data.String        (String)
 
 -- | A thing with a location attached.
 data Located l a = Located {location::l,located:: a}
