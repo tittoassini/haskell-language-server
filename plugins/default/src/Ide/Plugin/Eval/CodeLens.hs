@@ -17,7 +17,7 @@
 {- |
 A plugin inspired by the REPLoid feature of <https://github.com/jyp/dante Dante>, <https://www.haskell.org/haddock/doc/html/ch03s08.html#idm140354810775744 Haddock>'s Examples and Properties and <https://hackage.haskell.org/package/doctest Doctest>.
 
-For a full example see the "Ide.Plugin.Eval.Example" module.
+For a full example see the "Ide.Plugin.Eval.Tutorial" module.
 -}
 module Ide.Plugin.Eval.CodeLens
   ( codeLens,
@@ -50,9 +50,9 @@ import           Data.Typeable                  (Typeable)
 import           Data.List                      (find)
 import           Development.IDE.Core.Rules     (runAction)
 import           Development.IDE.Core.RuleTypes (GetModSummary (..),
-                                                 GhcSession (..))
+                                                 GhcSessionDeps (..))
 import           Development.IDE.Core.Shake     (use_)
-import           Development.IDE.GHC.Util       (HscEnvEq, evalGhcEnv, hscEnv,
+import           Development.IDE.GHC.Util       (evalGhcEnv, hscEnv,
                                                  moduleImportPath,
                                                  textToStringBuffer)
 import           Development.IDE.Types.Location (toNormalizedFilePath',
@@ -105,7 +105,8 @@ import           Ide.Plugin.Eval.Code           (Statement, asStatements,
 import           Ide.Plugin.Eval.Debug          (asS, dbg, dbg_)
 import           Ide.Plugin.Eval.GHC            (addExtension, addImport,
                                                  addPackages, gStrictTry,
-                                                 hasPackage, isExpr)
+                                                 hasPackage, isExpr,
+                                                 modifyFlags)
 import           Ide.Plugin.Eval.Parse.Option   (langOptions)
 import           Ide.Plugin.Eval.Parse.Section  (Section (sectionFormat, sectionTests),
                                                  allSections)
@@ -174,7 +175,7 @@ codeLens lsp _state plId CodeLensParams {_textDocument} = response $ do
           . allSections
           . tokensFrom
           . T.unpack
-          $ text -- fp' (T.unpack text)
+          $ text
   let tests = testsBySection nonSetups
 
   cmd <- liftIO $ mkLspCommand plId evalCommandName "Evaluate=..." (Just [])
@@ -215,23 +216,19 @@ codeLens lsp _state plId CodeLensParams {_textDocument} = response $ do
   where
     trivial (Range p p') = p == p'
 
-testsBySection :: [Section] -> [(Section, Loc Test)]
-testsBySection sections =
-  [(section, test) | section <- sections, test <- sectionTests section]
-
 evalCommandName :: CommandId
 evalCommandName = "evalCommand"
 
 evalCommand :: PluginCommand
 evalCommand = PluginCommand evalCommandName "evaluate" runEvalCmd
 
+-- |Specify test section to execute
 data EvalParams = EvalParams
   { sections :: [Section],
     module_  :: !TextDocumentIdentifier
   }
   deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
--- TODO: report errors that take place during
 runEvalCmd :: CommandFunction EvalParams
 runEvalCmd lsp state EvalParams {..} = withIndefiniteProgress lsp "Evaluating" Cancellable $ response' $ do
   now <- liftIO getCurrentTime
@@ -242,23 +239,15 @@ runEvalCmd lsp state EvalParams {..} = withIndefiniteProgress lsp "Evaluating" C
   contents <- liftIO $ getVirtualFileFunc lsp $ toNormalizedUri _uri
   text <- handleMaybe "contents" $ virtualFileText <$> contents
 
-  session :: HscEnvEq <-
+  session  <-
     liftIO $
-      runAction "runEvalCmd.ghcSession" state $
-        use_ GhcSession nfp
+      runAction "runEvalCmd.ghcSessionDeps" state $
+        use_ GhcSessionDeps nfp
 
   ms <-
     liftIO $
       runAction "runEvalCmd.getModSummary" state $
         use_ GetModSummary nfp
-
-  -- pr <-
-  --   liftIO $
-  --     runAction "runEvalCmd.GetParsedModule" state $
-  --       use_ GetParsedModule nfp
-  -- liftIO $ dbg "PREPROCESSED" $ asS . pm_parsed_source $ pr
-
-  -- >>> 2+2
 
   let tests = testsBySection sections
 
@@ -276,14 +265,19 @@ runEvalCmd lsp state EvalParams {..} = withIndefiniteProgress lsp "Evaluating" C
 
         -- Get options and language flags from module source
         df0 <- liftIO $ setupDynFlagsForGHCiLike env $ ms_hspp_opts ms
+        _ <- setSessionDynFlags df0
+        dbg "df0 imports" $ importPaths df0
 
         -- We add back the local importPath, so that we can find local dependencies
-        let df = df0 {importPaths=[impPath]}
-        _lp <- setSessionDynFlags df
-        dbg "df" df
+        --let df = df0 {importPaths=[impPath]}
+        --_lp <- setSessionDynFlags df
+        df <- modifyFlags (\df -> df {importPaths=[impPath]})
+        dbg "df imports" $ importPaths df0
+        --dbg "df" df
 
         -- property tests need QuickCheck
-        when (needsQuickCheck tests) $ void $ addPackages df ["QuickCheck"]
+        -- when (needsQuickCheck tests) $ void $ addPackages df ["QuickCheck"]
+        when (needsQuickCheck tests) $ void $ addPackages ["QuickCheck"]
         dbg "QUICKCHECK NEEDS, HAS" (needsQuickCheck tests,hasQuickCheck df)
 
         -- copy the package state to the interactive DynFlags
@@ -337,6 +331,10 @@ runEvalCmd lsp state EvalParams {..} = withIndefiniteProgress lsp "Evaluating" C
   dbg "TIME" (diffUTCTime now' now)
 
   return (WorkspaceApplyEdit, ApplyWorkspaceEditParams workspaceEdits)
+
+testsBySection :: [Section] -> [(Section, Loc Test)]
+testsBySection sections =
+  [(section, test) | section <- sections, test <- sectionTests section]
 
 runTests :: String -> [(Section, Loc Test)] -> Ghc [TextEdit]
 runTests fp tests =  do
@@ -519,29 +517,6 @@ doTypeCmd dflags arg = do
             "::" <+> ppr ty
           )
     else expr <> " :: " <> rawType <> "\n"
-
--- evalGhciLikeCmd :: GhcMonad m => Text -> Text -> m (Maybe [Text])
--- evalGhciLikeCmd cmd arg = do
---   df <- getSessionDynFlags
---   let tppr = T.pack . showSDoc df . ppr
---   case cmd of
---     "kind" -> do
---       let input = T.strip arg
---       (_, kind) <- typeKind False $ T.unpack input
---       pure $ Just [input <> " :: " <> tppr kind]
---     "kind!" -> do
---       let input = T.strip arg
---       (ty, kind) <- typeKind True $ T.unpack input
---       pure
---         $ Just
---         [ input <> " :: " <> tppr kind
---         , "= " <> tppr ty
---         ]
---     "type" -> do
---       let (emod, expr) = parseExprMode arg
---       ty <- exprType emod $ T.unpack expr
---       pure $ Just [expr <> " :: " <> tppr ty]
---     _ -> E.throw $ GhciLikeCmdNotImplemented cmd arg
 
 parseExprMode :: Text -> (TcRnExprMode, T.Text)
 parseExprMode rawArg =
