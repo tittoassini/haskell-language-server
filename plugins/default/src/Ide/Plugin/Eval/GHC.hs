@@ -1,7 +1,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wwarn #-}
+{-# OPTIONS_GHC -Wwarn -fno-warn-unused-imports -Wno-orphans #-}
 
 -- |GHC API utilities
 module Ide.Plugin.Eval.GHC
@@ -10,11 +9,14 @@ module Ide.Plugin.Eval.GHC
     addImport,
     hasPackage,
     addPackages,
+    modifyFlags,
     gStrictTry,
   )
 where
 import           Control.Exception           (SomeException)
 import           Data.List                   (isPrefixOf)
+import           Development.IDE.GHC.Error   ()
+import           Development.IDE.GHC.Util    (modifyDynFlags)
 import           DynFlags                    (DynFlags (importPaths, includePaths))
 import qualified EnumSet
 import           Exception                   (ExceptionMonad)
@@ -39,7 +41,7 @@ import           GhcPlugins                  (DefUnitId (DefUnitId),
 import           GhcPlugins                  (ComponentId, PackageName,
                                               SourcePackageId)
 import           HscTypes                    (InteractiveContext (ic_dflags))
-import           Ide.Plugin.Eval.Debug       (dbgO, asS)
+import           Ide.Plugin.Eval.Debug       (asS, dbgO)
 import qualified Lexer                       as Lexer
 import           Module                      (UnitId (DefiniteUnitId))
 import           Outputable                  (Outputable (ppr), SDoc,
@@ -48,18 +50,12 @@ import qualified Parser                      as Parser
 import           SrcLoc                      (mkRealSrcLoc)
 import           StringBuffer                (stringToStringBuffer)
 
--- "/Users/titto/.stack/programs/x86_64-osx/ghc-8.6.5/lib/ghc-8.6.5"
--- "/Users/titto/.stack/snapshots/x86_64-osx/65b7f0730eb8d5b5606f86e169ee82d145a1a9bf9b50f15c61c3fb503534bb9c/8.6.5/"
-
 -- $setup
 -- >>> import GHC
--- >>> -- libdir = "/usr/local/lib/ghc-8.6.5"
--- >>> -- libdir = "/Users/titto/.stack/snapshots/x86_64-osx/65b7f0730eb8d5b5606f86e169ee82d145a1a9bf9b50f15c61c3fb503534bb9c/8.6.5"
--- >>> -- libdir = "/Users/titto/.stack/snapshots/x86_64-osx/006ed83b78b71386c9343a9748834df5f31b7b2dbd0ee5c5e0f22a740c48781f/8.6.5/lib/x86_64-osx-ghc-8.6.5/"
 -- >>> import GHC.Paths
 -- >>> run act = runGhc (Just libdir) (getSessionDynFlags >>= act)
 -- >>> libdir
--- "/Users/titto/.stack/programs/x86_64-osx/ghc-8.6.5/lib/ghc-8.6.5"
+-- "/Users/titto/.stack/programs/x86_64-osx/ghc-8.8.4/lib/ghc-8.8.4"
 
 {-| Returns true if string is an expression
 
@@ -89,8 +85,9 @@ parseThing parser dflags stmt = do
   Lexer.unP parser (Lexer.mkPState dflags buf loc)
 
 {- | True if specified package is present in DynFlags
+
 -- >>> hasPackageTst pkg = run $ \df -> return (hasPackage df pkg)
->>> hasPackageTst pkg = run $ \df -> addPackages df [pkg] >>= return . either Left (\df -> Right (hasPackage df pkg))
+>>> hasPackageTst pkg = run $ \_ -> addPackages [pkg] >>= return . either Left (\df -> Right (hasPackage df pkg))
 
 >>> hasPackageTst "base"
 Right True
@@ -99,7 +96,7 @@ Right True
 Right True
 
 >>> hasPackageTst "QuickCheck"
-Left "<command line>: cannot satisfy -package QuickCheck\n    (use -v for more information)"
+Right True
 -}
 hasPackage :: DynFlags -> String -> Bool
 hasPackage df name = any (\pkg -> case pkg of
@@ -108,7 +105,7 @@ hasPackage df name = any (\pkg -> case pkg of
   _                                                      -> False) $ packageFlags df
 
 {- | Expose a list of packages
->>> addPackagesTest pkgs = run (\df -> (packageFlags <$>) <$> addPackages df pkgs)
+>>> addPackagesTest pkgs = run (\_ -> (packageFlags <$>) <$> addPackages pkgs)
 
 >>> addPackagesTest []
 Right []
@@ -122,30 +119,33 @@ Left "<command line>: cannot satisfy -package QuickCheck\n    (use -v for more i
 >>> addPackagesTest ["notThere"]
 Left "<command line>: cannot satisfy -package notThere\n    (use -v for more information)"
 -}
-addPackages :: DynFlags -> [String] -> Ghc (Either String DynFlags)
-addPackages df pkgNames = gStrictTry $ do
-    _ <- setSessionDynFlags $ df
-      { packageFlags = map expose pkgNames ++ packageFlags df
-         }
-    dflags <- getSessionDynFlags
-    --(dflags,_preloadedUnits) <- liftIO $ initPackages dflags
-    return dflags
-
+addPackages :: [String] -> Ghc (Either String DynFlags)
+addPackages pkgNames = gStrictTry $ modifyFlags $ (\df-> df { packageFlags = map expose pkgNames ++ packageFlags df})
   where
     expose name = ExposePackage ("-package "++name) (PackageArg name) (ModRenaming True []) -- -package-id filepath-1.4.2.1
 
-{- Add import to evaluation context
+modifyFlags :: GhcMonad m => (DynFlags -> DynFlags) -> m DynFlags
+modifyFlags f = do
+        df <- getSessionDynFlags
+        _ <- setSessionDynFlags (f df)
+        getSessionDynFlags
+
+-- modifyFlags f = do
+--         modifyDynFlags f
+--         getSessionDynFlags
+
+
+{- | Add import to evaluation context
 
 >>> run $ \_ -> addImport "import Data.Maybe"
 Could not find module ‘Data.Maybe’
-Use -v to see a list of the files searched for.
+Use -v (or `:set -v` in ghci) to see a list of the files searched for.
 
->>> run $ \df -> addPackages df ["base"] >> addImport "import Data.Maybe"
+>>> run $ \df -> addPackages ["base"] >> addImport "import Data.Maybe"
 [import Data.Maybe]
 
->>> run $ \df -> addPackages df ["base"] >> addImport "import qualified Data.Maybe as M"
+>>> run $ \df -> addPackages ["base"] >> addImport "import qualified Data.Maybe as M"
 [import qualified Data.Maybe as M]
-
 -}
 addImport :: GhcMonad m => String -> m [InteractiveImport]
 addImport i = do
@@ -157,44 +157,12 @@ addImport i = do
   -- dbg "CONTEXT'" ctx'
   getContext
 
--- TODO: not working for source files in the same project as the module being tested
--- addImport :: GhcMonad m => String -> m ()
--- addImport i = do
---   ctx <- getContext
---   dbgO "CONTEXT" ctx
---   idecl <- parseImportDecl i
---   let L _  moduleName = ideclName idecl
---   -- let mdlName = moduleNameString moduleName
---   -- dbg "MDLNAME" mdlName
---   isLoaded moduleName >>= dbgO "ISLOADED"
---   -- dbg "MDLNAME2" mdlName
---   -- getModSummary moduleName >>= dbgO "SUMMARY"
 
---   -- mdl <- lookupModule moduleName Nothing
---   -- dbgO "MDL" mdl
---   -- isInterpreted <- moduleIsInterpreted mdl
---   -- dbg "INTERPRETED" isInterpreted
-
---   -- when isInterpreted $ do
---   --   target <- guessTarget mdlName Nothing
---   --   addTarget target
---   --   loaded <- load LoadAllTargets
---   --   dbg "LOADED" (asS loaded)
---   --   -- case r of
---   --   --    GHC.Failed -> error $ "Failed compilation of " ++ mdlName
---   --   --    GHC.Succeeded -> dbg "LOADED" $ "Compiled " ++ mdlName
---   --           -- let m = mkModuleName m
---   dbgO "ADD IMPORT" idecl
---   setContext $ IIDecl idecl : ctx
---   ctx' <- getContext
---   dbgO "CONTEXT'" ctx'
-
-{- Add extension to interactive evaluation session
+{- | Add extension to interactive evaluation session
 >>> import GHC.LanguageExtensions.Type(Extension(..))
 >>> run $ \_ -> addExtension DeriveGeneric
 ()
 -}
-
 addExtension :: GhcMonad m => Extension -> m ()
 addExtension ext =
   modifySession $ \hsc -> hsc {hsc_IC = setExtension (hsc_IC hsc) ext}
@@ -216,26 +184,6 @@ instance Show DynFlags where
       -- ,("pkgDatabase",(map) (ppr . installedPackageId) . pkgDatabase $ df)
       -- ,("pkgDatabase",text . show <$> pkgDatabase $ df)
       ]
-
-  -- where
-  --    showInstalledPkgInfo dfs =
---       Out.showSDoc dfs . Out.ppr . installedPackageId
-
-instance Show PackageFlag where show = asS
-
-instance Show InteractiveImport where show = asS
-
-instance Show InstalledUnitId  where show = asS
-
-instance Show ComponentId  where show = asS
-
-instance Show PackageName  where show = asS
-
-instance Show ModuleName  where show = asS
-
-instance Show Module  where show = asS
-
-instance Show SourcePackageId  where show = asS
 
 -- hList :: [String] -> SDoc
 -- hList = hsep . map text
