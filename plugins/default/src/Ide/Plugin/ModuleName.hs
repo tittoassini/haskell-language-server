@@ -36,6 +36,7 @@ import           Development.IDE            (GetParsedModule (GetParsedModule),
                                              evalGhcEnv, realSrcSpanToRange,
                                              runAction, toNormalizedUri,
                                              uriToFilePath', use, use_)
+import           Development.IDE.Core.FileStore (getFileContents)
 import           Development.IDE.Plugin     (getPid)
 import           GHC                        (DynFlags (importPaths),
                                              GenLocated (L),
@@ -101,12 +102,12 @@ editCmd _lf _ide workspaceEdits = return (Right Null, Just $ (WorkspaceApplyEdit
 
 -- | Required actions (actually, at most one) that can be converted to either CodeLenses or CodeActions
 actions :: Show a1 => (Action -> a1) -> LspFuncs c -> IdeState -> Uri -> IO (Either a2 (List a1))
-actions convert lsp state uri = do
+actions convert _lsp state uri = do
     let Just nfp = uriToNormalizedFilePath $ toNormalizedUri uri
     let Just fp = uriToFilePath' uri
 
-    contents <- liftIO $ getVirtualFileFunc lsp $ toNormalizedUri uri
-    let emptyModule = maybe True ((==0) . T.length . T.strip . virtualFileText) contents
+    (_, contents) <- runAction "ModuleName" state $ getFileContents $ nfp
+    let emptyModule = maybe True ((==0) . T.length . T.strip) contents
 
     correctNameMaybe <- pathModuleName state nfp fp
     statedNameMaybe <- codeModuleName state nfp
