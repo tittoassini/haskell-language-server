@@ -60,7 +60,13 @@ locate0 = locate . Located 0
 
 type Txt = String
 
-data Section = Section {sectionName::Txt,sectionTests::[Loc Test],sectionLanguage::Language,sectionFormat::Format} deriving (Eq, Show, Generic,FromJSON, ToJSON,NFData)
+data Section = Section 
+  {sectionName::Txt
+  ,sectionTests::[Loc Test]
+  ,sectionLanguage::Language
+  ,sectionFormat::Format
+  } 
+  deriving (Eq, Show, Generic,FromJSON, ToJSON,NFData)
 
 hasTests :: Section -> Bool
 hasTests = not . null . sectionTests
