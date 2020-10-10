@@ -259,21 +259,14 @@ runEvalCmd lsp state EvalParams {..} = withIndefiniteProgress lsp "Evaluating" C
   -- Setup environment for evaluation
   hscEnv' <- withSystemTempFile (takeFileName fp) $ \logFilename logHandle -> ExceptT $ (either Left id <$>) . gStrictTry $
   -- Right hscEnv' <- liftIO $ withSystemTempFile (takeFileName fp) $ \logFilename logHandle ->  (either Left id <$>) . gStrictTry $
-      evalGhcEnv (hscEnv session) $ do
+      evalGhcEnv (hscEnvWithImportPaths session) $ do
         env <- getSession
         dbg "ENV SESSION DFLAGS".  ic_dflags . hsc_IC  $ env
 
         -- Get options and language flags from module source
-        df0 <- liftIO $ setupDynFlagsForGHCiLike env $ ms_hspp_opts ms
+        df <- liftIO $ setupDynFlagsForGHCiLike env $ ms_hspp_opts ms
         _ <- setSessionDynFlags df0
-        dbg "df0 imports" $ importPaths df0
-
-        -- We add back the local importPath, so that we can find local dependencies
-        --let df = df0 {importPaths=[impPath]}
-        --_lp <- setSessionDynFlags df
-        df <- modifyFlags (\df -> df {importPaths=[impPath]})
-        dbg "df imports" $ importPaths df0
-        --dbg "df" df
+        dbg "df imports" $ importPaths df
 
         -- property tests need QuickCheck
         -- when (needsQuickCheck tests) $ void $ addPackages df ["QuickCheck"]
@@ -691,4 +684,3 @@ Or for a value that does not have a Show instance:
 
 No instance for (Show V)
 -}
-
