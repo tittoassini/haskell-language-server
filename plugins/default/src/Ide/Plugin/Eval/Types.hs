@@ -88,13 +88,6 @@ isProperty :: Test -> Bool
 isProperty (Property _ _) = True
 isProperty _              = False
 
--- testLines (Example e r) = (e,r)
--- testLines (Property e r) = ([e],r)
-
---data Interaction = Interaction {iTest:: NonEmpty Txt,iResult:: [Txt]} deriving (Eq, Show, Generic, FromJSON, ToJSON,NFData)
-
--- hasResult :: Interaction -> Bool
--- hasResult = not . null . iResult
 
 data Format = SingleLine | MultiLine   deriving (Eq, Show, Ord,Generic, FromJSON, ToJSON,NFData)
 data Language = Plain | Haddock deriving (Eq, Show, Generic, Ord,FromJSON, ToJSON,NFData)
