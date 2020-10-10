@@ -197,8 +197,3 @@ gStrictTry op =
     -- gStrictTry op = MC.catch
     (op >>= \v -> return $! Right $! v)
     (\(err :: SomeException) -> return $! Left $! show $! err)
-
--- strictTry :: NFData b => IO b -> IO (Either String b)
--- strictTry op = E.catch
---   (op >>= \v -> return $! Right $! deepseq v v)
---   (\(err :: E.SomeException) -> return $! Left $ show err)
