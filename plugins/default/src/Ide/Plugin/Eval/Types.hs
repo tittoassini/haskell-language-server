@@ -92,9 +92,6 @@ isProperty _              = False
 data Format = SingleLine | MultiLine   deriving (Eq, Show, Ord,Generic, FromJSON, ToJSON,NFData)
 data Language = Plain | Haddock deriving (Eq, Show, Generic, Ord,FromJSON, ToJSON,NFData)
 
--- type Expression = String
-
--- type ExpectedResult = [ExpectedLine]
 
 data ExpectedLine = ExpectedLine [LineChunk] | WildCardLine
    deriving (Eq, Show, Generic, FromJSON, ToJSON,NFData)
