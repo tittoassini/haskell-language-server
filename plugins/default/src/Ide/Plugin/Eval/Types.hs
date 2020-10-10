@@ -78,7 +78,9 @@ hasPropertyTest = any (isProperty . unLoc) . sectionTests
 splitSections :: [Section] -> ([Section], [Section])
 splitSections = partition ((== "setup") . sectionName)
 
-data Test = Example {testLines::(NonEmpty Txt),testOutput:: [Txt]} | Property {testline::Txt,testOutput::[Txt]}
+data Test 
+  = Example {testLines::(NonEmpty Txt),testOutput:: [Txt]} 
+  | Property {testline::Txt,testOutput::[Txt]}
 --data Test line = Example (NonEmpty line) [line] | Property line [line]
   deriving (Eq, Show, Generic, FromJSON, ToJSON,NFData)
 
