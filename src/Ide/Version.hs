@@ -3,7 +3,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
 -- | Information and display strings for HIE's version
 -- and the current project's version
 module Ide.Version where
@@ -78,4 +77,3 @@ findVersionOf tool =
 
     consumeParser :: ReadP a -> String -> Maybe a
     consumeParser p input = listToMaybe $ map fst . filter (null . snd) $ readP_to_S p input
-
