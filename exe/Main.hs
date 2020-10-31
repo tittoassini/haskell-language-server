@@ -28,7 +28,7 @@ import           Ide.Plugin.Brittany       as Brittany
 import           Ide.Plugin                (pluginDescToIdePlugins)
 import           Ide.Plugin.ModuleName     as ModuleName
 import           Ide.Plugin.Pragmas        as Pragmas
-
+import           Ide.Plugin.Trace        as Trace
 
 -- ---------------------------------------------------------------------
 
@@ -60,6 +60,7 @@ idePlugins includeExamples = pluginDescToIdePlugins allPlugins
       , Eval.descriptor "eval"
       , ImportLens.descriptor "importLens"
       , ModuleName.descriptor "moduleName"
+      , Trace.descriptor "log"
       ]
     examplePlugins =
       [Example.descriptor  "eg"

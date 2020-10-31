@@ -93,7 +93,7 @@ executable haskell-language-server
     Ide.Plugin.Pragmas
     Ide.Plugin.Retrie
     Ide.Plugin.StylishHaskell
-
+    Ide.Plugin.Trace
   ghc-options:
     -threaded -Wall -Wno-name-shadowing -Wredundant-constraints
     -- allow user RTS overrides
@@ -142,6 +142,11 @@ executable haskell-language-server
     , time
     , transformers
     , unordered-containers
+    , parser-combinators
+    , pretty-simple
+    , Diff == 0.4.*
+    , ghc-paths
+    , QuickCheck
 
   if flag(agpl)
     build-depends: brittany
