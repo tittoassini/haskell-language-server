@@ -1,0 +1,37 @@
+-- Tests can be in either plain or Haddock comments in both single line or multi line format.
+-- Comments and tests that do not start on the first column or the first line of a multi-line comment are ignored.
+module TAllComments where
+
+-- Single line plain comment
+-- >>> "a"++"b"
+-- "ab"
+
+{- Multi line plain comment
+>>> "b"++"c"
+"bc"
+-}
+
+{- | Single line Haddock comment
+ >>> "a"++"b"
+-}
+
+{- Multi line Haddock comment
+>>> "b"++"c"
+"bc"
+-}
+
+twice :: [a] -> [a]
+twice a = a ++ a
+{- ^ Also in backward Haddock comments
+ >>> twice "ABC"
+-}
+
+-- Ignored as it doesn't start on the first column.
+-- >>> IGNORED
+-- Data constructor not in scope: IGNORED
+
+{- | >>> 2+5
+7
+
+     >>> IGNORED
+-}
