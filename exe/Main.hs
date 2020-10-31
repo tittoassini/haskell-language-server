@@ -60,7 +60,7 @@ idePlugins includeExamples = pluginDescToIdePlugins allPlugins
       , Eval.descriptor "eval"
       , ImportLens.descriptor "importLens"
       , ModuleName.descriptor "moduleName"
-      , Trace.descriptor "log"
+      , Trace.descriptor "trace"
       ]
     examplePlugins =
       [Example.descriptor  "eg"
