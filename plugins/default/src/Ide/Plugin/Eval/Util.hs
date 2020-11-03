@@ -76,8 +76,6 @@ dbg state key val =
     asT :: Show a => a -> T.Text
     asT = T.pack . show
 
--- class AsText s where asT    = T.pack . show
-
 logLevel :: Priority
 logLevel = Info -- Debug
 

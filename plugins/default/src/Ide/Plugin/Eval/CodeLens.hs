@@ -326,8 +326,6 @@ data EvalParams = EvalParams
     }
     deriving (Eq, Show, Generic, FromJSON, ToJSON)
 
--- >>> 4+4
-
 runEvalCmd :: CommandFunction EvalParams
 runEvalCmd lsp st EvalParams{..} =
     let -- dbg st = dbg st_ state
@@ -457,8 +455,6 @@ runEvalCmd lsp st EvalParams{..} =
      in perf "evalCmd" $
             withIndefiniteProgress lsp "Evaluating" Cancellable $
                 response' cmd
-
--- >>> 8+4
 
 moduleText :: (IsString e, MonadIO m) => LspFuncs c -> Uri -> ExceptT e m Text
 moduleText lsp uri =

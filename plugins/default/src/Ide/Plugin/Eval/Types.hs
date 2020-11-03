@@ -69,7 +69,7 @@ splitSections :: [Section] -> ([Section], [Section])
 splitSections = partition ((== "setup") . sectionName)
 
 data Test
-    = Example {testLines :: (NonEmpty Txt), testOutput :: [Txt]}
+    = Example {testLines :: NonEmpty Txt, testOutput :: [Txt]}
     | Property {testline :: Txt, testOutput :: [Txt]}
     deriving (Eq, Show, Generic, FromJSON, ToJSON, NFData)
 
