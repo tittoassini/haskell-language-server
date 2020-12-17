@@ -64,7 +64,7 @@ defaults: &defaults
         no_output_timeout: 120m
 
     - run:
-        name: Remove eval hie.html
+        name: Remove eval hie.html (incompatible with stack)
         command: rm test/testdata/eval/hie.yaml
 
     - run:
@@ -184,8 +184,8 @@ workflows:
       # - ghc-8.6.5
       # - ghc-8.8.2
       # - ghc-8.8.3
-      # - ghc-8.8.4
+      - ghc-8.8.4
       # - ghc-8.10.1
-      # - ghc-8.10.2
+      - ghc-8.10.2
       # - ghc-nightly
-      - cabal
+      # - cabal
