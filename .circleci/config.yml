@@ -36,8 +36,8 @@ defaults: &defaults
 
     - run:
         name: Build (we need the exe for tests)
+        # need j1, else ghc-lib-parser triggers OOM
         command: stack -j 1 --stack-yaml=${STACK_FILE} install
-                       # need j1, else ghc-lib-parser triggers OOM
         no_output_timeout: 30m
 
     - run:
@@ -62,6 +62,10 @@ defaults: &defaults
         # command: stack -j 1 --stack-yaml=${STACK_FILE} test ghcide --dump-logs
         command: echo "ghcide tests disabled until they got fixed, see https://github.com/mpickering/ghcide/issues/25"
         no_output_timeout: 120m
+
+    - run:
+        name: Remove eval hie.html
+        command: rm test/testdata/eval/hie.yaml
 
     - run:
         name: Test haskell-language-server func-test suite
@@ -177,11 +181,11 @@ workflows:
   multiple-ghcs:
     jobs:
       - ghc-8.6.4
-      - ghc-8.6.5
-      - ghc-8.8.2
-      - ghc-8.8.3
-      - ghc-8.8.4
-      - ghc-8.10.1
-      - ghc-8.10.2
+      # - ghc-8.6.5
+      # - ghc-8.8.2
+      # - ghc-8.8.3
+      # - ghc-8.8.4
+      # - ghc-8.10.1
+      # - ghc-8.10.2
       # - ghc-nightly
       - cabal
