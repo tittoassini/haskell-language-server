@@ -246,7 +246,6 @@ test-suite func-test
     , tasty-expected-failure
     , tasty-golden
     , tasty-rerun
-    , QuickCheck
 
   hs-source-dirs:     test/functional plugins/tactics/src
 
