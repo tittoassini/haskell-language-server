@@ -64,8 +64,12 @@ defaults: &defaults
         no_output_timeout: 120m
 
     - run:
-        name: Setup stack eval hie.html (incompatible with stack)
+        name: Setup stack eval hie.html
         command: cp test/testdata/eval/hie-stack.yaml test/testdata/eval/hie.yaml
+
+    - run:
+        name: Setup stack eval stack.html
+        command: cp resolver.txt test/testdata/eval/stack.yaml
 
     - run:
         name: Test haskell-language-server func-test suite
