@@ -8,10 +8,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # ghc: ['default', 'ghc8102', 'ghc884', 'ghc865']
-        # os: [ubuntu-latest, macOS-latest]
-        ghc: ["ghc884"]
-        os: [ubuntu-latest]
+        ghc: ["default", "ghc8102", "ghc884", "ghc865"]
+        os: [ubuntu-latest, macOS-latest]
 
     steps:
       - uses: actions/checkout@v2
