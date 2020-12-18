@@ -69,7 +69,7 @@ defaults: &defaults
 
     - run:
         name: Setup stack eval stack.html
-        command: grep '^resolver:' stack-build.txt > test/testdata/eval/stack.yaml;grep '^compiler:' stack-build.txt >> test/testdata/eval/stack.yaml
+        command: grep '^resolver:\|^compiler:' stack-build.txt > test/testdata/eval/stack.yaml
 
     - run:
         name: Test haskell-language-server func-test suite
