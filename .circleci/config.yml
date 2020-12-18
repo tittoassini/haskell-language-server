@@ -69,11 +69,7 @@ defaults: &defaults
 
     - run:
         name: Setup stack eval stack.html
-        command: cp resolver.txt test/testdata/eval/stack.yaml;grep '^compiler:' stack-build.txt >> test/testdata/eval/stack.yaml
-
-    # - run:
-    #     name: Show resolver
-    #     command: cat resolver.txt
+        command: grep '^resolver:' stack-build.txt > test/testdata/eval/stack.yaml;grep '^compiler:' stack-build.txt >> test/testdata/eval/stack.yaml
 
     - run:
         name: Test haskell-language-server func-test suite
@@ -189,11 +185,11 @@ workflows:
   multiple-ghcs:
     jobs:
       - ghc-8.6.4
-      # - ghc-8.6.5
-      # - ghc-8.8.2
-      #- ghc-8.8.3
-      #- ghc-8.8.4
-      # - ghc-8.10.1
-      # - ghc-8.10.2
+      - ghc-8.6.5
+      - ghc-8.8.2
+      - ghc-8.8.3
+      - ghc-8.8.4
+      - ghc-8.10.1
+      - ghc-8.10.2
       # - ghc-nightly
-      # - cabal
+      - cabal
