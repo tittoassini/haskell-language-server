@@ -116,6 +116,7 @@ import GHC (
  )
 import GHC.Generics (Generic)
 import qualified GHC.LanguageExtensions.Type as LangExt
+import GhcMonad (modifySession)
 import GhcPlugins (
     DynFlags (..),
     defaultLogActionHPutStrDoc,
@@ -133,6 +134,8 @@ import HscTypes (
     ModSummary (ms_mod),
     Target (Target),
     TargetId (TargetFile),
+    hsc_IC,
+    setInteractivePrintName,
  )
 import Ide.Plugin (mkLspCommand)
 import Ide.Plugin.Eval.Code (
@@ -180,6 +183,7 @@ import Ide.Plugin.Eval.Util (
     handleMaybeM,
     isLiterate,
     logWith,
+    logWithT,
     response,
     response',
     timed,
@@ -381,6 +385,8 @@ runEvalCmd lsp st EvalParams{..} =
                         , useColor = Never
                         , canUseColor = False
                         }
+                idflags <- getInteractiveDynFlags
+                logWithT st "interactive flags" $ T.pack (showDynFlags idflags)
 
                 -- set up a custom log action
                 setLogAction $ \_df _wr _sev _span _style _doc ->
@@ -439,11 +445,18 @@ testsBySection sections =
 type TEnv = (IdeState, String)
 
 runTests :: TEnv -> [(Section, Loc Test)] -> Ghc [TextEdit]
-runTests e@(_st, _) tests = do
+runTests e@(st, _) tests = do
+    let dbg = logWith st
     df <- getInteractiveDynFlags
+    dbg "QUICKCHECK HAS" $ hasQuickCheck df
     evalSetup
-    when (hasQuickCheck df && needsQuickCheck tests) $ void $ evals e df propSetup
+    noOutput <- last <$> runDecls "evalNoOutput _ = return ()"
+    modifySession $ \hsc -> hsc{hsc_IC = setInteractivePrintName (hsc_IC hsc) noOutput}
 
+    dbg "DO PROP SETUP" $ hasQuickCheck df && needsQuickCheck tests
+    when (hasQuickCheck df && needsQuickCheck tests) $ do
+        rs <- evals e df propSetup
+        dbg "PROP SETUP RES" rs
     mapM (processTest e df) tests
   where
     processTest :: TEnv -> DynFlags -> (Section, Loc Test) -> Ghc TextEdit
@@ -532,28 +545,30 @@ evals (st, fp) df stmts = do
         Right rs -> concat . catMaybes $ rs
   where
     dbg = logWith st
+    perf = timed dbg
     eval :: Statement -> Ghc (Maybe [Text])
     eval (Located l stmt)
         | -- A :set -XLanguageOption directive
           isRight (langOptions stmt) =
-            either
-                (return . Just . errorLines)
-                ( \es -> do
-                    dbg "{:SET" es
-                    ndf <- getInteractiveDynFlags
-                    dbg "pre set" $ showDynFlags ndf
-                    mapM_ addExtension es
-                    ndf <- getInteractiveDynFlags
-                    dbg "post set" $ showDynFlags ndf
-                    return Nothing
-                )
-                $ ghcOptions stmt
+            perf (":set " ++ show (langOptions stmt)) $ do
+                either
+                    (return . Just . errorLines)
+                    ( \es -> do
+                        dbg "{:SET" es
+                        ndf <- getInteractiveDynFlags
+                        logWithT st "pre set" $ T.pack (showDynFlags ndf)
+                        mapM_ addExtension es
+                        ndf <- getInteractiveDynFlags
+                        logWithT st "post set" $ T.pack (showDynFlags ndf)
+                        return Nothing
+                    )
+                    $ ghcOptions stmt
         | -- A type/kind command
           Just (cmd, arg) <- parseGhciLikeCmd $ T.pack stmt =
             evalGhciLikeCmd cmd arg
         | -- An expression
           isExpr df stmt =
-            do
+            perf ("EXPR " ++ stmt) $ do
                 dbg "{EXPR" stmt
                 eres <- gStrictTry $ evalExpr stmt
                 dbg "RES ->" eres
@@ -563,29 +578,24 @@ evals (st, fp) df stmts = do
                 dbg "EXPR} ->" res
                 return . Just $ res
         | -- A statement
-          isStmt df stmt =
-            do
-                dbg "{STMT " stmt
-                res <- exec stmt l
-                r <- case res of
-                    ExecComplete (Left err) _ -> return . Just . errorLines . show $ err
-                    ExecComplete (Right _) _ -> return Nothing
-                    ExecBreak{} ->
-                        return . Just . singleLine $ "breakpoints are not supported"
-                dbg "STMT} -> " r
-                return r
+          isStmt df stmt = perf ("STMT " ++ stmt) $ do
+            dbg "{STMT " stmt
+            res <- exec stmt l
+            r <- case res of
+                ExecComplete (Left err) _ -> return . Just . errorLines . show $ err
+                ExecComplete (Right _) _ -> return Nothing
+                ExecBreak{} ->
+                    return . Just . singleLine $ "breakpoints are not supported"
+            dbg "STMT} -> " r
+            return r
         | -- An import
-          isImport df stmt =
-            do
-                dbg "{IMPORT " stmt
-                _ <- addImport stmt
-                return Nothing
+          isImport df stmt = perf ("IMPORT " ++ stmt) $ do
+            _ <- addImport stmt
+            return Nothing
         | -- A declaration
-          otherwise =
-            do
-                dbg "{DECL " stmt
-                void $ runDecls stmt
-                return Nothing
+          otherwise = perf ("DECL " ++ stmt) $ do
+            void $ runDecls stmt
+            return Nothing
     exec stmt l =
         let opts = execOptions{execSourceFile = fp, execLineNumber = l}
          in execStmt stmt opts
