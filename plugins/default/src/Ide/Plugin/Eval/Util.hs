@@ -1,7 +1,7 @@
 {-# LANGUAGE ImplicitParams #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wwarn -Wno-orphans #-}
 
 -- |Debug utilities
 module Ide.Plugin.Eval.Util (
@@ -14,6 +14,7 @@ module Ide.Plugin.Eval.Util (
     response',
     gStrictTry,
     logWith,
+    logWithT,
 ) where
 
 import Control.Monad (join)
@@ -61,24 +62,29 @@ timed out name op = do
     _ <- out name (showDuration secs)
     return r
 
--- |Log using hie logger, reports source position of logging statement
-logWith :: (HasCallStack, MonadIO m, Show a1, Show a2) => IdeState -> a1 -> a2 -> m ()
-logWith state key val =
+{- |Log using hie logger, reports source position of logging statement
+ logWith :: (HasCallStack, MonadIO m, Show a1, Show a2) => IdeState -> a1 -> a2 -> m ()
+-}
+logWith :: (MonadIO m, Show a1, Show a2) => IdeState -> a1 -> a2 -> m ()
+logWith state key val = logWithT state (asT key) (asT val)
+
+logWithT :: MonadIO m => IdeState -> T.Text -> T.Text -> m ()
+logWithT state key val =
     liftIO . logPriority (ideLogger state) logLevel $
         T.unwords
-            [T.pack logWithPos, asT key, asT val]
+            [T.pack logWithPos, key, val]
   where
     logWithPos =
         let stk = toList callStack
             pr pos = concat [srcLocFile pos, ":", show . srcLocStartLine $ pos, ":", show . srcLocStartCol $ pos]
          in if null stk then "" else pr . snd . head $ stk
 
-    asT :: Show a => a -> T.Text
-    asT = T.pack . show
+asT :: Show a => a -> T.Text
+asT = T.pack . show
 
 -- | Set to Info to see extensive debug info in hie log, set to Debug in production
 logLevel :: Priority
-logLevel = Debug -- Info
+logLevel = Info -- Debug -- Info
 
 isLiterate :: FilePath -> Bool
 isLiterate x = takeExtension x `elem` [".lhs", ".lhs-boot"]
