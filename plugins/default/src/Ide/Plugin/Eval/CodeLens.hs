@@ -256,7 +256,7 @@ codeLens lsp st plId CodeLensParams{_textDocument} =
                 session :: HscEnvEq <- perf "session" $ runGetSession st $ toNormalizedFilePath' fp
 
 #ifdef mingw32_HOST_OS
-                dbg "windows does not use CPP"
+                dbg "windows does not use CPP" True
                 let text = mdlText
 #else
                 Right (ppContent, _dflags) <-
