@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
@@ -252,9 +253,12 @@ codeLens lsp st plId CodeLensParams{_textDocument} =
                 {- Normalise CPP/LHS files/custom preprocessed files.
                    Used to extract tests correctly from CPP and LHS (Bird-style).
                 -}
-                session :: HscEnvEq <-
-                    runGetSession st $ toNormalizedFilePath' fp
+                session :: HscEnvEq <- perf "session" $ runGetSession st $ toNormalizedFilePath' fp
 
+#ifdef mingw32_HOST_OS
+                dbg "windows does not use CPP"
+                let text = mdlText
+#else
                 Right (ppContent, _dflags) <-
                     perf "preprocessor" $
                         liftIO $
@@ -265,7 +269,7 @@ codeLens lsp st plId CodeLensParams{_textDocument} =
                             stringBufferToByteString
                                 ppContent
                 -- dbg "PREPROCESSED CONTENT" text
-
+#endif
                 -- Extract tests from source code
                 let Right (setups, nonSetups) =
                         (splitSections . filter hasTests <$>)
@@ -450,8 +454,8 @@ runTests e@(st, _) tests = do
     df <- getInteractiveDynFlags
     dbg "QUICKCHECK HAS" $ hasQuickCheck df
     evalSetup
-    noOutput <- last <$> runDecls "evalNoOutput _ = return ()"
-    modifySession $ \hsc -> hsc{hsc_IC = setInteractivePrintName (hsc_IC hsc) noOutput}
+    -- noOutput <- last <$> runDecls "evalNoOutput _ = return ()"
+    -- modifySession $ \hsc -> hsc{hsc_IC = setInteractivePrintName (hsc_IC hsc) noOutput}
 
     dbg "DO PROP SETUP" $ hasQuickCheck df && needsQuickCheck tests
     when (hasQuickCheck df && needsQuickCheck tests) $ do
