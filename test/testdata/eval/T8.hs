@@ -7,4 +7,4 @@ module T8 where
 
 -- >>> "
 
--- >>> 3 `div` 0
+-- >>> div 3 0
