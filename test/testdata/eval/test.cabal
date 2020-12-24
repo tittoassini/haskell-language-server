@@ -48,7 +48,7 @@ library
       TIO
       TProperty
       TPrelude
-      TCPP
+      -- TCPP
       TLHS
       Util
 
