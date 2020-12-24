@@ -156,7 +156,7 @@ executable haskell-language-server
     , Diff
     , QuickCheck
     , ghc-paths
-
+    , with-utf8
 
   if flag(agpl)
     build-depends: brittany     >= 0.13.1.0

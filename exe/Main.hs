@@ -30,6 +30,7 @@ import           Ide.Plugin.Brittany       as Brittany
 import           Ide.Plugin                (pluginDescToIdePlugins)
 import           Ide.Plugin.ModuleName     as ModuleName
 import           Ide.Plugin.Pragmas        as Pragmas
+import Main.Utf8 (withUtf8)
 
 
 -- ---------------------------------------------------------------------
@@ -72,7 +73,7 @@ idePlugins includeExamples = pluginDescToIdePlugins allPlugins
 -- ---------------------------------------------------------------------
 
 main :: IO ()
-main = do
+main = withUtf8 $ do
     args <- getArguments "haskell-language-server"
 
     let withExamples =
